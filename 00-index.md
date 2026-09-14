@@ -23,9 +23,11 @@ This repository is organized as a step-by-step learning path for secure remote a
 15. [12-tailscale-vs-cloudflare.md](12-tailscale-vs-cloudflare.md) — Tailscale vs Cloudflare decision guide
 16. [13-monitoring-and-logs.md](13-monitoring-and-logs.md) — health checks and operational visibility
 17. [14-ssh-tunneling.md](14-ssh-tunneling.md) — SSH port forwarding and jump host patterns
-18. [15-backup-and-maintenance.md](15-backup-and-maintenance.md) — routine upkeep and recovery readiness16. [16-new-device-onboarding.md](16-new-device-onboarding.md) — standard process for joining a new device
-19. [17-security-audit-checklist.md](17-security-audit-checklist.md) — repeatable review checklist
-20. [18-remote-access-playbook.md](18-remote-access-playbook.md) — recovery process when SSH stops working
+18. [15-backup-and-maintenance.md](15-backup-and-maintenance.md) — routine upkeep and recovery readiness
+19. [16-new-device-onboarding.md](16-new-device-onboarding.md) — standard process for joining a new device
+20. [17-security-audit-checklist.md](17-security-audit-checklist.md) — repeatable review checklist
+21. [18-remote-access-playbook.md](18-remote-access-playbook.md) — recovery process when SSH stops working
+22. [19-ssh-key-management.md](19-ssh-key-management.md) — safe SSH key generation, rotation, and cleanup
 
 ## Recommended reading flow
 
