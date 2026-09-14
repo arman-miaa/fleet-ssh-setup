@@ -18,6 +18,12 @@ This repository is organized as a step-by-step learning path for secure remote a
 10. [07-access-policy.md](07-access-policy.md) — access policy and risk controls
 11. [08-recovery-and-rollback.md](08-recovery-and-rollback.md) — restore path when access breaks
 12. [09-ssh-client-quickstart.md](09-ssh-client-quickstart.md) — quick client connection guide
+13. [10-tailscale-basics.md](10-tailscale-basics.md) — private mesh networking basics
+14. [11-cloudflare-tunnel-basics.md](11-cloudflare-tunnel-basics.md) — tunnel overview and comparison
+15. [12-tailscale-vs-cloudflare.md](12-tailscale-vs-cloudflare.md) — Tailscale vs Cloudflare decision guide
+16. [13-monitoring-and-logs.md](13-monitoring-and-logs.md) — health checks and operational visibility
+17. [14-ssh-tunneling.md](14-ssh-tunneling.md) — SSH port forwarding and jump host patterns
+18. [15-backup-and-maintenance.md](15-backup-and-maintenance.md) — routine upkeep and recovery readiness
 
 ## Recommended reading flow
 
