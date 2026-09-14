@@ -23,8 +23,9 @@ This repository is organized as a step-by-step learning path for secure remote a
 15. [12-tailscale-vs-cloudflare.md](12-tailscale-vs-cloudflare.md) — Tailscale vs Cloudflare decision guide
 16. [13-monitoring-and-logs.md](13-monitoring-and-logs.md) — health checks and operational visibility
 17. [14-ssh-tunneling.md](14-ssh-tunneling.md) — SSH port forwarding and jump host patterns
-18. [15-backup-and-maintenance.md](15-backup-and-maintenance.md) — routine upkeep and recovery readiness
-
+18. [15-backup-and-maintenance.md](15-backup-and-maintenance.md) — routine upkeep and recovery readiness16. [16-new-device-onboarding.md](16-new-device-onboarding.md) — standard process for joining a new device
+17. [17-security-audit-checklist.md](17-security-audit-checklist.md) — repeatable review checklist
+18. [18-remote-access-playbook.md](18-remote-access-playbook.md) — recovery process when SSH stops working
 ## Recommended reading flow
 
 Start with the overview in [README.md](README.md), then continue in order from [01-headscale-setup.md](01-headscale-setup.md) onward.
