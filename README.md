@@ -1,178 +1,313 @@
-# Fleet SSH Setup — Windows Laptop over Tailscale/Headscale
+# Fleet SSH Setup — Windows Laptop over Tailscale / Headscale
 
-Windows ল্যাপটপে OpenSSH সার্ভার সেটআপ করার স্ক্রিপ্ট ও গাইড, যাতে Tailscale/Headscale মেশ নেটওয়ার্কের নির্দিষ্ট ডিভাইস (DGX, Mac mini) থেকে নিরাপদে SSH করা যায়।
+এই রিপোজিটরি একটি আধুনিক, নিরাপদ ও রিমোট-ম্যানেজমেন্ট-ফ্রেন্ডলি SSH সেটআপ গাইড। এখানে Windows ল্যাপটপে OpenSSH সার্ভার ইন্সটল করে Tailscale/Headscale মেশ নেটওয়ার্কের মধ্যে নির্দিষ্ট ডিভাইস থেকে SSH-এ ঢোকা যায়।
+
+> নোট: এই README-এ যে IP, ইউজারনেম ও ডিভাইস নাম দেখানো হয়েছে, সেগুলো শুধু ডেমো/ডামি ডেটা। Public repo-তে real IP বা ব্যক্তিগত নাম ব্যবহার করা হয়নি। নিজের সিস্টেমের জন্য এগুলো নিজে বদলে নিন।
 
 ## সূচিপত্র
-- [প্রি-রিকুইজিট](#১-প্রি-রিকুইজিট-স্ক্রিপ্ট-চালানোর-আগে-করতে-হবে)
-- [সেটআপ স্ক্রিপ্ট](#সেটআপ-স্ক্রিপ্ট)
-- [স্ক্রিপ্ট কী করে](#২-মূল-স্ক্রিপ্ট-কী-করে-লাইন-বাই-লাইন)
-- [অতিরিক্ত নিরাপত্তা](#৩-অতিরিক্ত-নিরাপত্তা-সেটআপ-ঐচ্ছিক-কিন্তু-সুপারিশকৃত)
-- [রিমোট ক্যাপাবিলিটি](#৪-কানেক্ট-হয়ে-গেলে--ডিভাইসে-হাত-না-দিয়ে-কী-কী-করা-যাবে)
-- [চেকলিস্ট](#৫-দ্রুত-চেকলিস্ট-নতুন-ল্যাপটপে)
+
+- [১. প্রয়োজনীয়তা ও প্রস্তুতি](#1-প্রয়োজনীয়তা-ও-প্রস্তুতি)
+- [২. সেটআপ স্ক্রিপ্ট](#2-সেটআপ-স্ক্রিপ্ট)
+- [৩. স্ক্রিপ্ট কী করে](#3-স্ক্রিপ্ট-কী-করে)
+- [৪. সিকিউরিটি বেস্ট প্র্যাকটিস](#4-সিকিউরিটি-বেস্ট-প্র্যাকটিস)
+- [৫. SSH-এ ঢুকে কী কী করা যাবে](#5-ssh-এ-ঢুকে-কী-কী-করা-যাবে)
+- [৬. দ্রুত চেকলিস্ট](#6-দ্রুত-চেকলিস্ট)
+- [৭. সমস্যা সমাধান](#7-সমস্যা-সমাধান)
 
 ---
 
-## ১. প্রি-রিকুইজিট (স্ক্রিপ্ট চালানোর আগে করতে হবে)
+## 1. প্রয়োজনীয়তা ও প্রস্তুতি
 
-### ১.১ PowerShell Administrator মোডে খুলুন
-- Start মেনুতে right-click → "Terminal (Admin)" বা "Windows PowerShell (Admin)"
-- `$ErrorActionPreference = "Stop"` থাকায় যেকোনো এরর হলে স্ক্রিপ্ট থেমে যাবে — এটা ইচ্ছাকৃত সেফটি।
+### ১.১ PowerShell Admin মোড
 
-### ১.২ Tailscale ইনস্টল ও Headscale নেটওয়ার্কে জয়েন
-স্ক্রিপ্টটি ধরে নেয় Tailscale **আগে থেকেই ইনস্টল ও কানেক্টেড**। নতুন ল্যাপটপে এটা প্রথমে করতে হবে:
+- Start মেনুতে রাইট-ক্লিক করে `Windows Terminal (Admin)` বা `PowerShell (Admin)` খুলুন
+- `Set-StrictMode -Version Latest` বা `$ErrorActionPreference = "Stop"` রাখুন, যাতে স্ক্রিপ্টে কোনো ত্রুটি হলে থেমে যায়
+
+### ১.২ Tailscale / Headscale সেটআপ
+
+স্ক্রিপ্ট চালানোর আগে Tailscale ইনস্টল ও Headscale নেটওয়ার্কে কানেক্টেড থাকতে হবে।
 
 ```powershell
 winget install tailscale.tailscale
 ```
 
-ইনস্টলের পর, আপনার Headscale সার্ভারের সাথে জয়েন করুন:
+Headscale URL আপনার server-এ HTTPS endpoint হতে হবে, উদাহরণ:
 
-```powershell
-tailscale up --login-server https://<আপনার-headscale-সার্ভার-URL>
+```text
+https://headscale.example.com
+https://hs.yourdomain.com
+https://your-server-ip:443
 ```
 
-- এটা চালালে একটা লগইন লিংক আসবে, ব্রাউজারে খুলে অথরাইজ করতে হবে (অথবা Headscale অ্যাডমিন প্রি-অথ কী দিলে `--authkey` ব্যবহার করুন)।
-- সফল হলে এই ল্যাপটপ একটা নতুন `100.64.x.x` টাইপ প্রাইভেট IP পাবে।
+তারপর Headscale সার্ভারের সাথে কানেক্ট করুন:
 
-### ১.৩ নতুন IP নোট করুন এবং অন্য মেশিনে আপডেট করুন
+```powershell
+tailscale up --login-server https://<your-headscale-server-url>
+```
+
+যদি Auth Key থাকে, তাহলে:
+
+```powershell
+tailscale up --login-server https://<your-headscale-server-url> --authkey <your-auth-key>
+```
+
+> Public repo-তে real URL, real IP, auth key, secret বা production domain কখনো লিখবেন না। `YOUR_HEADSCALE_URL`/`YOUR_AUTH_KEY`-এর মতো placeholder ব্যবহার করুন।
+
+সফল হলে ডিভাইসটি `100.64.x.x` ফরম্যাটের একটি private mesh IP পাবে।
+
+### ১.৩ নতুন IP নোট করুন
+
 ```powershell
 tailscale ip -4
 ```
-- এই IP-টা DGX আর Mac mini-র ফায়ারওয়াল/allowed-peer লিস্টে যোগ করতে হবে, নাহলে ওরা এই নতুন ল্যাপটপে SSH করতে পারবে না (one-way visibility problem)।
+
+এই IPটি অন্য মেশিনের firewall rule / allowed peer লিস্টে যোগ করতে হবে, যাতে অন্য ডিভাইসগুলো এই Windows ল্যাপটপে SSH-এ ঢুকতে পারে।
 
 ### ১.৪ ইউজার অ্যাকাউন্ট
-স্ক্রিপ্টে `Roni` ইউজারনেম হার্ডকোড করা আছে টেস্ট কমান্ডে। নিশ্চিত করুন:
-- এই নামের লোকাল/মাইক্রোসফট অ্যাকাউন্ট আছে
-- Administrator বা প্রয়োজনীয় গ্রুপে আছে (নাহলে SSH দিয়ে লগইন করলেও অনেক কমান্ড এক্সেস পাবে না)
+
+স্ক্রিপ্টের উদাহরণে `Arman` ব্যবহার করা হয়েছে। নিশ্চিত করুন:
+
+- Windows-এ `Arman` ব্যবহারকারী আছে
+- এই অ্যাকাউন্টটি Administrator বা যথেষ্ট privilege-সম্পন্ন
+- SSH login করার পর কমান্ড চালানোর জন্য দরকারি permissions আছে
+
+### ১.৫ Placeholder template
+
+Public repo-তে নিচের ফরম্যাট ব্যবহার করুন:
+
+```text
+HEADSCALE_URL=https://<your-headscale-server-url>
+WINDOWS_USERNAME=Arman
+TRUSTED_PEER_1=100.64.10.2
+TRUSTED_PEER_2=100.64.10.5
+REMOTE_SSH_HOST=100.64.10.12
+```
 
 ---
 
-## সেটআপ স্ক্রিপ্ট
+## 2. সেটআপ স্ক্রিপ্ট
 
-Administrator PowerShell-এ এটা রান করুন:
+Admin PowerShell-এ নিচের স্ক্রিপ্টটি রান করুন:
 
 ```powershell
 $ErrorActionPreference = "Stop"
 
-# Install and start SSH.
+# 1) OpenSSH Server install
 $ssh = Get-WindowsCapability -Online -Name "OpenSSH.Server~~~~0.0.1.0"
 if ($ssh.State -ne "Installed") {
     Add-WindowsCapability -Online -Name $ssh.Name
 }
+
+# 2) Start SSH service
 Set-Service sshd -StartupType Automatic
 Start-Service sshd
 sc.exe failure sshd reset= 86400 actions= restart/5000/restart/15000/restart/30000
 
-# Keep the existing Headscale connection running.
+# 3) Keep Tailscale running on startup
 if (Get-Service Tailscale -ErrorAction SilentlyContinue) {
     Set-Service Tailscale -StartupType Automatic
     Start-Service Tailscale
 }
 
-# Allow SSH from DGX and Mac mini through the mesh.
-$peers = @("100.64.0.2", "100.64.0.5")
+# 4) Allow SSH only from trusted mesh peers
+$peers = @("100.64.10.2", "100.64.10.5")
 if (Get-NetFirewallRule -Name "Fleet-SSH" -ErrorAction SilentlyContinue) {
     Remove-NetFirewallRule -Name "Fleet-SSH"
 }
-New-NetFirewallRule -Name "Fleet-SSH" -DisplayName "Fleet SSH" `
-    -Direction Inbound -Action Allow -Protocol TCP -LocalPort 22 `
-    -RemoteAddress $peers -Profile Any
 
-# Prevent sleep while connected to power.
+New-NetFirewallRule -Name "Fleet-SSH" `
+    -DisplayName "Fleet SSH" `
+    -Direction Inbound `
+    -Action Allow `
+    -Protocol TCP `
+    -LocalPort 22 `
+    -RemoteAddress $peers `
+    -Profile Any
+
+# 5) Keep laptop awake when on AC power
 powercfg /change standby-timeout-ac 0
 powercfg /change hibernate-timeout-ac 0
 
-# Show whether SSH is ready.
+# 6) Final verification
 Get-Service sshd,Tailscale -ErrorAction SilentlyContinue
 Get-NetTCPConnection -State Listen -LocalPort 22
-Write-Host "Ready for SSH testing from DGX: ssh Roni@100.64.0.6"
+Write-Host "SSH is ready. Test from trusted peer: ssh Arman@100.64.10.12"
 ```
 
-> **নোট:** `$peers` লিস্টের IP ও `Roni` ইউজারনেম আপনার নিজের সেটআপ অনুযায়ী বদলে নিন।
+> Placeholder version: replace `Arman` with your user, and replace `100.64.10.2`, `100.64.10.5`, `100.64.10.12` with your actual mesh IPs before using in a real environment.
+
+> গুরুত্বপূর্ণ: `$peers`-এ থাকা IP এবং `Arman` নাম নিজস্ব নেটওয়ার্ক অনুযায়ী বদলে নিন। উপরের IP-গুলো ডেমো ডেটা মাত্র।
 
 ---
 
-## ২. মূল স্ক্রিপ্ট কী করে (লাইন-বাই-লাইন)
+## 3. স্ক্রিপ্ট কী করে
 
-| ধাপ | কাজ |
-|---|---|
-| OpenSSH ক্যাপাবিলিটি চেক ও ইনস্টল | Windows-এর বিল্ট-ইন SSH সার্ভার ফিচার অন করে |
-| `sshd` সার্ভিস অটোস্টার্ট + চালু | রিবুটের পরও SSH সার্ভার নিজে থেকে চলবে |
-| `sc.exe failure` রিকভারি রুল | সার্ভিস ক্র্যাশ করলে ৫সে./১৫সে./৩০সে. পর পর অটো-রিস্টার্ট |
-| Tailscale সার্ভিস অটোস্টার্ট + চালু | মেশ নেটওয়ার্ক কানেকশন পার্সিস্ট্যান্ট রাখে |
-| `Fleet-SSH` ফায়ারওয়াল রুল | শুধু DGX (`100.64.0.2`) আর Mac mini (`100.64.0.5`) থেকে পোর্ট 22-এ ঢুকতে দেয়; আগের রুল থাকলে মুছে নতুন করে বসায় |
-| `powercfg` কমান্ড দুটো | AC পাওয়ারে থাকলে sleep/hibernate বন্ধ, যাতে সবসময় রিচেবল থাকে |
-| শেষের চেকগুলো | সার্ভিস স্ট্যাটাস, পোর্ট 22 লিসেনিং কিনা, আর টেস্ট SSH কমান্ড দেখায় |
+| ধাপ                       | কী কাজ করে                                                          |
+| ------------------------- | ------------------------------------------------------------------- |
+| OpenSSH Capability চেক    | Windows-এ বিল্ট-ইন OpenSSH Server feature install করে               |
+| `sshd` service চালু       | কম্পিউটার রিস্টার্টের পরও SSH সার্ভার চলতে থাকে                     |
+| `sc.exe failure`          | সার্ভিস ক্র্যাশ হলে ৫s/১৫s/৩০s-এ auto-restart করে                   |
+| Tailscale start-up config | Headscale mesh কানেকশন সবসময়ভাবে লাইভ থাকে                         |
+| Firewall rule `Fleet-SSH` | শুধুমাত্র নির্দিষ্ট mesh peer-দের কাছ থেকে Port 22-এ SSH ঢুকতে দেয় |
+| `powercfg`                | AC পাওয়ারে থাকলে sleep/hibernate বন্ধ রাখে                         |
+| শেষের চেক                 | SSH কনফিগ ঠিক আছে কি না, Port 22 listen করছে কি না তা পরীক্ষা করে   |
 
-### সতর্কতা / সাইড এফেক্ট
-- **শুধু AC পাওয়ারে sleep বন্ধ** — ব্যাটারিতে চললে ল্যাপটপ ঘুমিয়ে যাবে, তখন SSH আনরিচেবল হবে।
-- **ফায়ারওয়াল রুল IP-বেসড**, key-based auth নয় — যদি DGX/Mac mini-র IP কোনোভাবে বদলে যায় (Tailscale re-key, ডিভাইস রিসেট), এই রুল আর কাজ করবে না, রুল আপডেট করতে হবে।
-- **পাসওয়ার্ড authentication ডিফল্টে অন থাকতে পারে** — নিরাপত্তার জন্য key-based auth সেটআপ করে পাসওয়ার্ড লগইন বন্ধ করে দেওয়া ভালো (নিচে দেখুন)।
+### সতর্কতা
+
+- `sleep`/`hibernate` শুধুমাত্র AC power-এ বন্ধ থাকে; ব্যাটারি মোডে ল্যাপটপ ঘুমিয়ে যেতে পারে।
+- Firewall rule IP-based, তাই peer IP বদলে গেলে rule আপডেট করতে হবে।
+- Default password login অন থাকতে পারে; secure করার জন্য key-based auth setup করা উচিত।
 
 ---
 
-## ৩. অতিরিক্ত নিরাপত্তা সেটআপ (ঐচ্ছিক কিন্তু সুপারিশকৃত)
+## 4. সিকিউরিটি বেস্ট প্র্যাকটিস
 
-### Key-based auth সেটআপ (পাসওয়ার্ডবিহীন, বেশি নিরাপদ)
-DGX/Mac mini থেকে:
+### ৪.১ Key-based authentication
+
+Remote machine (যেমন অন্য কম্পিউটার) থেকে:
+
 ```bash
-ssh-copy-id Roni@100.64.0.6
+ssh-copy-id Arman@100.64.10.12
 ```
-অথবা ম্যানুয়ালি পাবলিক কী `C:\Users\Roni\.ssh\authorized_keys`-এ বসিয়ে দিন।
 
-### পাসওয়ার্ড auth বন্ধ (key বসানোর পর)
-`C:\ProgramData\ssh\sshd_config` ফাইলে:
-```
+অথবা ম্যানুয়ালি `C:\Users\Arman\.ssh\authorized_keys`-এ public key বসিয়ে দিন।
+
+### ৪.২ PasswordAuthentication বন্ধ করা
+
+`C:\ProgramData\ssh\sshd_config`-এ এই লাইনটি যোগ/এডিট করুন:
+
+```text
 PasswordAuthentication no
 ```
-তারপর: `Restart-Service sshd`
+
+তারপর:
+
+```powershell
+Restart-Service sshd
+```
+
+### ৪.৩ SSH config hardening
+
+নিরাপত্তার জন্য `sshd_config`-এ কিছু অতিরিক্ত সেটিং ব্যবহার করা যেতে পারে:
+
+```text
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+X11Forwarding no
+AllowUsers Arman
+
+# Optional
+ListenAddress 0.0.0.0
+```
+
+### ৪.৪ Firewall best practice
+
+- শুধুমাত্র নির্দিষ্ট peer IP-ই SSH-এ ঢুকতে পারবে
+- Port 22 open রাখলেও mesh-private network-এ সীমাবদ্ধ রাখুন
+- সময়ে সময়ে firewall rules review করুন
 
 ---
 
-## ৪. কানেক্ট হয়ে গেলে — ডিভাইসে হাত না দিয়ে কী কী করা যাবে
+## 5. SSH-এ ঢুকে কী কী করা যাবে
 
-একবার SSH দিয়ে ঢুকতে পারলে, DGX বা Mac mini থেকে এই উইন্ডোজ ল্যাপটপে **প্রায় সব কিছু** কমান্ড লাইনে করা যায়:
+একবার SSH কানেক্ট হলে, Windows ল্যাপটপের উপর **কমান্ড-লাইন থেকে প্রায় সব কাজ** করা যাবে:
 
-### ৪.১ সিস্টেম মনিটরিং ও ম্যানেজমেন্ট
-- CPU/RAM/ডিস্ক ইউজেজ চেক (`Get-Process`, `Get-Counter`, `Get-Volume`)
-- ইভেন্ট লগ দেখা (`Get-EventLog`, `Get-WinEvent`)
-- চলমান সার্ভিস/প্রসেস স্টার্ট-স্টপ-কিল করা (`Start-Service`, `Stop-Process`)
-- সিস্টেম ইনফো, আপটাইম, ইনস্টলড সফটওয়্যার লিস্ট দেখা
+### ৫.১ System monitoring
 
-### ৪.২ ফাইল অপারেশন
-- `scp` বা `sftp` দিয়ে ফাইল আপলোড/ডাউনলোড
-- ফাইল/ফোল্ডার তৈরি, মোছা, কপি, মুভ, পারমিশন বদলানো
-- বড় ডেটাসেট বা মডেল ফাইল সিঙ্ক করা (rsync-এর মতো টুল উইন্ডোজেও চালানো যায় WSL দিয়ে)
+- `Get-Process`, `Get-Counter`, `Get-Volume` দিয়ে CPU/RAM/Disk usage দেখা
+- `Get-EventLog`, `Get-WinEvent` দিয়ে লগ বিশ্লেষণ
+- `Get-Service`, `Start-Service`, `Stop-Service` দিয়ে services control
 
-### ৪.৩ প্রোগ্রাম/স্ক্রিপ্ট রান করা
-- PowerShell/Python/অন্য যেকোনো ইনস্টলড ভাষার স্ক্রিপ্ট রিমোটলি এক্সিকিউট করা
-- শিডিউলড টাস্ক তৈরি বা ট্রিগার করা (`Task Scheduler` কমান্ড লাইন থেকে)
-- GPU থাকলে সেখানে ট্রেনিং/ইনফারেন্স জব চালানো ও লগ মনিটর করা
+### ৫.২ File operations
 
-### ৪.৪ নেটওয়ার্ক ও রিমোট এক্সেস
-- নতুন ফায়ারওয়াল রুল বা পোর্ট ফরওয়ার্ড সেটআপ
-- অন্য সার্ভিস (যেমন ওয়েব সার্ভার, ডাটাবেস) রিমোটলি চালু/বন্ধ করা
-- ওই ল্যাপটপকে **jump host** হিসেবে ব্যবহার করে নেটওয়ার্কের অন্য ডিভাইসে পৌঁছানো (SSH tunneling/port forwarding দিয়ে)
+- `scp` বা `sftp` ব্যবহার করে file upload/download
+- `Copy-Item`, `Move-Item`, `Remove-Item` দিয়ে folder/file management
+- WSL বা external tools দিয়ে large dataset sync করা
 
-### ৪.৫ পাওয়ার/সিস্টেম কন্ট্রোল
-- রিমোট রিস্টার্ট/শাটডাউন (`Restart-Computer`, `shutdown /r`)
-- পাওয়ার প্ল্যান বদলানো
-- (Wake-on-LAN আলাদাভাবে সেটআপ থাকলে) বন্ধ থাকা ডিভাইস অন করাও সম্ভব — কিন্তু সেটা এই স্ক্রিপ্টের অংশ না, আলাদা করে করতে হবে
+### ৫.৩ Script and automation execution
 
-### ৪.৬ যা করা যাবে **না** (ফিজিক্যাল এক্সেস ছাড়া)
-- BIOS/UEFI সেটিংস পরিবর্তন
-- হার্ডওয়্যার-লেভেল সমস্যা (যেমন ব্যাটারি, RAM ফল্ট) ডায়াগনোজ/ফিক্স
-- সম্পূর্ণ বন্ধ (shutdown, hibernate না) থাকা ডিভাইস চালু করা — যদি না Wake-on-LAN আলাদাভাবে কনফিগার করা থাকে
-- GUI-নির্ভর কিছু কাজ, যদি না RDP/VNC-এর মতো আলাদা রিমোট-ডেস্কটপ টুল সেটআপ করা থাকে (SSH দিয়ে ডিফল্টে শুধু কমান্ড-লাইন এক্সেস পাওয়া যায়)
+- PowerShell, Python, JavaScript বা অন্য installed runtime script চালানো
+- Task Scheduler-এ automation task তৈরি
+- Remote training/inference job trigger করা (GPU থাকলে)
+
+### ৫.৪ Remote network access
+
+- Firewall rule add/remove
+- Port forwarding / tunneling setup
+- jump host হিসাবে ব্যবহার করে অন্য ডিভাইসে SSH-এ পৌঁছানো
+
+### ৫.৫ Power control
+
+- `Restart-Computer`, `shutdown /r` দিয়ে reboot/restart
+- power plan change করা
+- Wake-on-LAN আলাদাভাবে সেটআপ থাকলে remote wake-up করা
+
+### ৫.৬ যা করা যাবে না
+
+- BIOS/UEFI settings পরিবর্তন
+- hardware-level issue diagnose/repair
+- সম্পূর্ণ shut down থাকা ডিভাইস চালু করা, যদি Wake-on-LAN না থাকে
+- GUI-based কাজ, যদি RDP/VNC আলাদা ভাবে setup না থাকে
 
 ---
 
-## ৫. দ্রুত চেকলিস্ট (নতুন ল্যাপটপে)
+## 6. দ্রুত চেকলিস্ট
 
-1. ⬜ Tailscale ইনস্টল + Headscale-এ জয়েন
-2. ⬜ নতুন IP নোট করে DGX/Mac mini-তে আপডেট
-3. ⬜ `Roni` ইউজার অ্যাকাউন্ট তৈরি/কনফার্ম
-4. ⬜ মূল স্ক্রিপ্ট Admin PowerShell-এ রান
-5. ⬜ Key-based SSH auth সেটআপ
-6. ⬜ পাসওয়ার্ড auth বন্ধ
-7. ⬜ DGX থেকে টেস্ট: `ssh Roni@100.64.0.6`
+1. ⬜ Tailscale ইনস্টল ও Headscale-এ join
+2. ⬜ নতুন mesh IP নোট করে অন্য ডিভাইসে আপডেট
+3. ⬜ `Arman` ব্যবহারকারী তৈরি/নিশ্চিত করুন
+4. ⬜ Admin PowerShell-এ setup script রান করুন
+5. ⬜ Key-based SSH auth সেটআপ করুন
+6. ⬜ PasswordAuthentication বন্ধ করুন
+7. ⬜ টেস্ট কমান্ড রান করুন: `ssh Arman@100.64.10.12`
+
+---
+
+## 7. সমস্যা সমাধান
+
+### SSH connection refused
+
+- `Get-Service sshd` চেক করুন
+- `Get-NetTCPConnection -State Listen -LocalPort 22` দেখুন
+- Firewall rule `Fleet-SSH` আছে কি না verify করুন
+
+### Tailscale peer cannot reach host
+
+- `tailscale status` রান করুন
+- `tailscale ip -4` দিয়ে ঠিক IP আছে কি না যাচাই করুন
+- peer device-এ firewall rule/allowed peer list update হয়েছে কি না দেখুন
+
+### Authentication failed
+
+- `Arman` user exists কিনা verify করুন
+- public key ঠিকভাবে `authorized_keys`-এ আছে কি না দেখুন
+- `sshd_config`-এ `PasswordAuthentication no` সেট আছে কিনা verify করুন
+
+### Laptop sleeps unexpectedly
+
+- `powercfg /query` দিয়ে current power plan inspect করুন
+- AC mode-এ `standby-timeout-ac 0` সেট আছে কি না verify করুন
+- laptop power adapter connected আছে কি না দেখুন
+
+---
+
+## প্রাথমিক টেস্ট কমান্ড
+
+```bash
+ssh Arman@100.64.10.12
+whoami
+hostname
+Get-ComputerInfo | Select-Object CsName,WindowsVersion
+```
+
+যদি এই কমান্ডগুলো সফল হয়, তাহলে SSH setup সঠিকভাবে কাজ করছে।
+
+---
+
+## নির্দেশনা
+
+- এই README-এ প্রদত্ত IP এবং username শুধুমাত্র উদাহরণ
+- production environment-এ নিজের ঠিক IP, user name ও headscale URL ব্যবহার করুন
+- public repo-তে sensitive data কখনো commit করবেন না
+- security-sensitive setup-এ always review firewall, authentication এবং network allow-list
