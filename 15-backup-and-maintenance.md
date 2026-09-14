@@ -7,6 +7,7 @@ This note covers the routine operational tasks needed to keep remote infrastruct
 ## 1. Why maintenance matters
 
 A remote SSH setup is not a one-time install. It requires:
+
 - periodic checks
 - config review
 - service restarts
@@ -16,6 +17,7 @@ A remote SSH setup is not a one-time install. It requires:
 ## 2. Backup essentials
 
 Keep backups of:
+
 - SSH config files
 - public/private key files
 - firewall rule exports
@@ -37,6 +39,7 @@ sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 ## 3. Maintenance routine
 
 Recommended weekly or monthly steps:
+
 - review SSH access
 - verify Tailscale status
 - review firewall allow-list

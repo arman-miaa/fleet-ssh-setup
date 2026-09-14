@@ -9,6 +9,7 @@ This note explains the idea of SSH tunneling and when it is useful.
 SSH tunneling lets you forward traffic through an encrypted SSH connection.
 
 It can be used for:
+
 - port forwarding
 - secure local proxying
 - reaching internal services through a trusted SSH host
@@ -29,6 +30,7 @@ ssh -L 8080:internal-service:80 arman@100.64.10.12
 ```
 
 This means:
+
 - local port 8080 is forwarded
 - traffic goes through the SSH host
 - remote service remains hidden behind the mesh
@@ -44,6 +46,7 @@ This allows a remote side to reach a service on the source machine.
 ## 5. Important caution
 
 SSH tunneling is powerful, but it must be used carefully:
+
 - restrict to trusted peers
 - use key-based access only
 - avoid exposing tunnels unnecessarily

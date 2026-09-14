@@ -7,6 +7,7 @@ This note covers the operational side of maintaining a remote SSH-enabled host.
 ## 1. Why monitoring matters
 
 Once a laptop or Linux host is reachable over SSH, you should monitor:
+
 - service status
 - uptime
 - CPU and memory usage

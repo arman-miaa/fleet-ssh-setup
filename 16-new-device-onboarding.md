@@ -7,6 +7,7 @@ This note explains the standard process for bringing a new device into the SSH +
 ## 1. Goal
 
 When a new device joins, the goal is to make it:
+
 - reachable over Tailscale
 - safe for SSH access
 - limited to trusted peers only
